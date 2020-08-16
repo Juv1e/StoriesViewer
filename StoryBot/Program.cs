@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using VkNet.AudioBypassService.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using VkNet.Enums.Filters;
+using Newtonsoft.Json;
 
 namespace StoryBot
 {
@@ -29,23 +30,36 @@ namespace StoryBot
             JObject data = JObject.Parse(settings);
             var login = data["Login"].ToString();
             var pass = data["Password"].ToString();
+            var token = data["Token"].ToString();
             try
             {
-                vkapi.Authorize(new ApiAuthParams
+                if (token.Length > 3)
                 {
-                    Login = login,
-                    Password = pass,
-                    Settings = Settings.All | Settings.Offline,
-                    TwoFactorAuthorization = () =>
+                    vkapi.Authorize(new ApiAuthParams
                     {
-                        Console.WriteLine("Введите код двухфакторки: ");
+                        AccessToken = token
+                    });
+                }
+                else
+                {
+                    vkapi.Authorize(new ApiAuthParams
+                    {
+                        Login = login,
+                        Password = pass,
+                        Settings = Settings.All | Settings.Offline,
+                        TwoFactorAuthorization = () =>
+                        {
+                            Console.WriteLine("Введите код двухфакторки: ");
 
-                        return Console.ReadLine();
-                    }
-                });
+                            return Console.ReadLine();
+                        }
+                    });
+                    data["Token"] = vkapi.Token;
+                    File.WriteAllText("settings.json", JsonConvert.SerializeObject(data, Formatting.Indented));
+                }
             }
             catch (Exception e ) { Console.WriteLine(e.Message); }
-            Console.Title = $"{vkapi.Users.Get(new long[] { Convert.ToInt64(vkapi.UserId) })[0].FirstName} {vkapi.Users.Get(new long[] { Convert.ToInt64(vkapi.UserId) })[0].LastName} просмотр историй";
+            // а мне похуй я далбаеб у меня справка
             for (int w = 0; w < wordsList.Count; w++)
             {
                 var word = wordsList[w];
